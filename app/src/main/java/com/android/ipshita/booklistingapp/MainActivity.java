@@ -12,6 +12,7 @@ import android.widget.ListView;
 import android.widget.Toast;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -32,7 +33,7 @@ public class MainActivity extends AppCompatActivity {
 
     /** URL to query the Google Books API information */
     private static final String BOOKS_REQUEST_URL =
-            "https://www.googleapis.com/books/v1/volumes?q=search+terms";
+            "https://www.googleapis.com/books/v1/volumes?q=java&key=AIzaSyABnoJx-Y-ujWseCd9Kxk33eGRWda7B7Ic&maxResults=10&country=IN";
 
     ArrayList<item> items=new ArrayList<item>();
 
@@ -49,17 +50,18 @@ public class MainActivity extends AppCompatActivity {
             public void onClick(View v) {
 
                 AsyncTaskBook book = new AsyncTaskBook();
-                String searching = searchitem.toString();
+                String searching = BOOKS_REQUEST_URL+searchitem.toString();
                 book.execute(searching);
-                itemadapter itemsAdapter = new itemadapter(getApplicationContext(), items);
-                ListView listView = (ListView) findViewById(R.id.list);
-                listView.setAdapter(itemsAdapter);
                 Toast toast=Toast.makeText(getApplicationContext(),"click",Toast.LENGTH_SHORT);
                 toast.show();
 
 
             }
         });
+
+        itemadapter itemsAdapter = new itemadapter(this,items);
+        ListView listView = (ListView) findViewById(R.id.list);
+        listView.setAdapter(itemsAdapter);
     }
 
     private void updateUi(item book) {
@@ -74,15 +76,13 @@ public class MainActivity extends AppCompatActivity {
         protected item doInBackground(String... params) {
             // Create URL object
             URL url = createUrl(BOOKS_REQUEST_URL);
-
             // Perform HTTP request to the URL and receive a JSON response back
             String jsonResponse = "";
             try {
                 jsonResponse = makeHttpRequest(url);
             } catch (IOException e) {
-                Log.e(LOG_TAG,"IO ERROR HEREHERER!",e);
+                Log.e(LOG_TAG,"IO ERROR!",e);
             }
-
             // Extract relevant fields from the JSON response and create an {@link Event} object
             item book = extractFeatureFromJson(jsonResponse);
 
@@ -133,7 +133,8 @@ public class MainActivity extends AppCompatActivity {
                 }
             } catch (IOException e) {
                 // TODO: Handle the exception
-            } finally {
+            }
+            finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
@@ -164,25 +165,31 @@ public class MainActivity extends AppCompatActivity {
             }
             try{
 
-                JSONObject root=new JSONObject(BOOKS_REQUEST_URL);
+                String authors = null;
+                JSONObject root=new JSONObject(bookJSON);
                 JSONArray items1=root.getJSONArray("items");
                 for(int i=0;i<items1.length();i++)
                 {
                     JSONObject book=items1.getJSONObject(i);
                     JSONObject volumeInfo=book.getJSONObject("volumeInfo");
                     String title=volumeInfo.getString("title");
-                    JSONArray authors=new JSONArray("authors");
+                    JSONArray jsonArrayauthor=book.getJSONArray("authors");
+                    for(int j=0;j<jsonArrayauthor.length();j++)
+                    {
+                        JSONObject author=jsonArrayauthor.getJSONObject(j);
+                        authors=author.getString("authors");
+                    }
 
-                    if(bookJSON.contains(title)||bookJSON.contains((CharSequence) authors)){
-                        item books=new item(title,authors);
-                        items.add(books);
+                    if(bookJSON.contains(title)||bookJSON.contains(authors)){
+                        return new item(title,authors);
                     }
                     else{
                         Toast toast = Toast.makeText(getApplicationContext(),"No book found",Toast.LENGTH_SHORT);
                         toast.show();
                     }
                 }
-            }catch(Exception e){
+            }catch(JSONException e){
+                Log.e(LOG_TAG, "Problem parsing the JSON results lower block");
                 e.printStackTrace();
             }
             return null;
