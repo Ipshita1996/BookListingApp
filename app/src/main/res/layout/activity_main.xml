@@ -19,14 +19,14 @@
     <EditText
         android:id="@+id/search"
         android:textColor="#a4a4a4"
-        android:hint="Name a book"
+        android:hint="@string/hint"
         android:layout_width="220dp"
         android:layout_height="wrap_content" />
 
     <Button
         android:id="@+id/search_button"
         android:layout_marginLeft="20dp"
-        android:text="search"
+        android:text="@string/search"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content" />
 </LinearLayout>
@@ -35,7 +35,7 @@
         android:id="@+id/prompt"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:text="no data"
+        android:text="@string/none"
         android:textAlignment="center"
         android:textSize="15dp" />
 
