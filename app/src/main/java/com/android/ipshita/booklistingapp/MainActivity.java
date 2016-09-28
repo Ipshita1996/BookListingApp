@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 url = new URL(stringUrl);
             } catch (MalformedURLException exception) {
-                Log.e("MainActivity.java", "Error with creating URL", exception);
+                Log.e("MainActivity.java", "Error while creating a URL", exception);
                 return null;
             }
             return url;
@@ -128,7 +128,7 @@ public class MainActivity extends AppCompatActivity {
                     inputStream = urlConnection.getInputStream();
                     jsonResponse = readFromStream(inputStream);
                 } else {
-                    Log.e("MainActivity.java", "The HTTP response code was not 200: " + urlConnection.getResponseCode());
+                    Log.e("MainActivity.java", "The HTTP response code is not 200");
                     return "";
                 }
             } catch (IOException e) {
@@ -174,7 +174,6 @@ public class MainActivity extends AppCompatActivity {
                     String bookAuthors = "";
                     if (volumeInfo.has("authors")) {
                         JSONArray authors = volumeInfo.getJSONArray("authors");
-                        // creates a list of the authors as a string
                         bookAuthors = authors.join(", ") + ".";
                         bookAuthors = bookAuthors.replaceAll("\"", "");
                     }
