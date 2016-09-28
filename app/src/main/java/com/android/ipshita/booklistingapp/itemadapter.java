@@ -15,7 +15,7 @@ import java.util.ArrayList;
 public class itemadapter extends ArrayAdapter<item> {
 
     public itemadapter(Context context, ArrayList<item> items){
-        super(context, 0, items);
+        super( context, 0, items);
     }
 
     @Override
@@ -30,13 +30,21 @@ public class itemadapter extends ArrayAdapter<item> {
 
 
         item current = getItem(position);
-        TextView title = (TextView) listItemView.findViewById(R.id.title);
-        title.setText(current.gettitle());
+        ViewHolder holder = new ViewHolder();
+        holder.bookTitle = (TextView) listItemView.findViewById(R.id.title);
+        holder.author = (TextView) listItemView.findViewById(R.id.author);
+        listItemView.setTag(holder);
 
-        TextView author = (TextView) listItemView.findViewById(R.id.author);
-        author.setText((CharSequence) current.getauthor());
+        holder.bookTitle.setText(current.gettitle());
+        holder.author.setText(current.getauthor());
+
 
         return listItemView;
 
+    }
+
+    static class ViewHolder {
+        TextView bookTitle;
+        TextView author;
     }
 }

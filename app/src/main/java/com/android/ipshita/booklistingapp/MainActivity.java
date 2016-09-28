@@ -1,15 +1,17 @@
 package com.android.ipshita.booklistingapp;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.ListView;
-import android.widget.Toast;
+import android.widget.TextView;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -28,75 +30,73 @@ import java.util.ArrayList;
 
 public class MainActivity extends AppCompatActivity {
 
-    /** Tag for the log messages */
-    public static final String LOG_TAG = MainActivity.class.getSimpleName();
-
-    /** URL to query the Google Books API information */
-    private static final String BOOKS_REQUEST_URL =
-            "https://www.googleapis.com/books/v1/volumes?q=java&key=AIzaSyABnoJx-Y-ujWseCd9Kxk33eGRWda7B7Ic&maxResults=10&country=IN";
-
-    ArrayList<item> items=new ArrayList<item>();
+    public String URL_RESULT = "";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        final EditText searchitem=(EditText)findViewById(R.id.search);
-        Button searchButton=(Button)findViewById(R.id.search_button);
+        Button searchButton = (Button) findViewById(R.id.search_button);
+        final EditText searchitem = (EditText) findViewById(R.id.search);
+
         assert searchButton != null;
         searchButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                URL_RESULT = "https://www.googleapis.com/books/v1/volumes?q=";
+                String searchString = searchitem.getText().toString();
+                searchString = searchString.trim();
+                searchString = searchString.replace(" ", "+");
+                URL_RESULT += searchString + "&key=AIzaSyABnoJx-Y-ujWseCd9Kxk33eGRWda7B7Ic&maxResults=10";
+                BookAsyncTask task = new BookAsyncTask();
+                ConnectivityManager cm = (ConnectivityManager) MainActivity.this.getSystemService(Context.CONNECTIVITY_SERVICE);
+                NetworkInfo activeNetwork = cm.getActiveNetworkInfo();
+                boolean isConnected = activeNetwork != null &&
+                        activeNetwork.isConnectedOrConnecting();
 
-                AsyncTaskBook book = new AsyncTaskBook();
-                String searching = BOOKS_REQUEST_URL+searchitem.toString();
-                book.execute(searching);
-                Toast toast=Toast.makeText(getApplicationContext(),"click",Toast.LENGTH_SHORT);
-                toast.show();
-
+                if (isConnected) {
+                    task.execute();
+                }
 
             }
         });
-
-        itemadapter itemsAdapter = new itemadapter(this,items);
-        ListView listView = (ListView) findViewById(R.id.list);
-        listView.setAdapter(itemsAdapter);
     }
 
-    private void updateUi(item book) {
-        items.add(book);
-    }
-
-
-
-    private class AsyncTaskBook extends AsyncTask<String, Void, item> {
+    private class BookAsyncTask extends AsyncTask<URL, Void, ArrayList<item>>{
 
         @Override
-        protected item doInBackground(String... params) {
-            // Create URL object
-            URL url = createUrl(BOOKS_REQUEST_URL);
-            // Perform HTTP request to the URL and receive a JSON response back
-            String jsonResponse = "";
-            try {
-                jsonResponse = makeHttpRequest(url);
-            } catch (IOException e) {
-                Log.e(LOG_TAG,"IO ERROR!",e);
+        protected ArrayList<item> doInBackground(URL... urls) {
+            URL url=createUrl(URL_RESULT);
+            String jsonResponse="";
+            try{
+                jsonResponse =makeHttpRequest(url);
+            }catch (IOException e){
+                Log.e("MainActivity.java","IO error");
             }
-            // Extract relevant fields from the JSON response and create an {@link Event} object
-            item book = extractFeatureFromJson(jsonResponse);
+            ArrayList<item> items;
 
-            // Return the {@link Event} object as the result fo the {@link TsunamiAsyncTask}
-            return book;
+            items=extractFeatureFromJson(jsonResponse);
+
+            return items;
         }
 
         @Override
-        protected void onPostExecute(item book) {
-            if (book == null) {
+        protected void onPostExecute(ArrayList<item> items){
+            if (items == null) {
                 return;
             }
 
-            updateUi(book);
+            itemadapter adapter = new itemadapter(MainActivity.this, items);
+
+            ListView bookList = (ListView) findViewById(R.id.list);
+
+            bookList.setAdapter(adapter);
+
+            TextView prompt = (TextView) findViewById(R.id.prompt);
+            if (prompt.getVisibility() == View.VISIBLE) {
+                prompt.setVisibility(View.GONE);
+            }
         }
 
         private URL createUrl(String stringUrl) {
@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
             try {
                 url = new URL(stringUrl);
             } catch (MalformedURLException exception) {
-                Log.e(LOG_TAG, "Error with creating URL", exception);
+                Log.e("MainActivity.java", "Error with creating URL", exception);
                 return null;
             }
             return url;
@@ -112,7 +112,8 @@ public class MainActivity extends AppCompatActivity {
 
         private String makeHttpRequest(URL url) throws IOException {
             String jsonResponse = "";
-            if(url==null){
+
+            if (url == null) {
                 return jsonResponse;
             }
             HttpURLConnection urlConnection = null;
@@ -123,18 +124,16 @@ public class MainActivity extends AppCompatActivity {
                 urlConnection.setReadTimeout(10000 /* milliseconds */);
                 urlConnection.setConnectTimeout(15000 /* milliseconds */);
                 urlConnection.connect();
-
-                if(urlConnection.getResponseCode()==200){
+                if (urlConnection.getResponseCode() == 200) {
                     inputStream = urlConnection.getInputStream();
                     jsonResponse = readFromStream(inputStream);
-                }
-                else{
-                    Log.e(LOG_TAG, "Problem parsing the JSON results");
+                } else {
+                    Log.e("MainActivity.java", "The HTTP response code was not 200: " + urlConnection.getResponseCode());
+                    return "";
                 }
             } catch (IOException e) {
-                // TODO: Handle the exception
-            }
-            finally {
+                Log.e("MainActivity.java", "Something went wrong with the IO");
+            } finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
@@ -145,6 +144,7 @@ public class MainActivity extends AppCompatActivity {
             }
             return jsonResponse;
         }
+
         private String readFromStream(InputStream inputStream) throws IOException {
             StringBuilder output = new StringBuilder();
             if (inputStream != null) {
@@ -158,41 +158,36 @@ public class MainActivity extends AppCompatActivity {
             }
             return output.toString();
         }
-        private item extractFeatureFromJson(String bookJSON) {
 
-            if(TextUtils.isEmpty(bookJSON)){
-                return null;
-            }
+        private ArrayList<item> extractFeatureFromJson(String bookJSON){
+
             try{
+                JSONObject baseJsonResponse = new JSONObject(bookJSON);
+                JSONArray itemsArray = baseJsonResponse.getJSONArray("items");
+                ArrayList<item> bookList = new ArrayList<item>();
 
-                String authors = null;
-                JSONObject root=new JSONObject(bookJSON);
-                JSONArray items1=root.getJSONArray("items");
-                for(int i=0;i<items1.length();i++)
+                for(int i=0;i<itemsArray.length();i++)
                 {
-                    JSONObject book=items1.getJSONObject(i);
-                    JSONObject volumeInfo=book.getJSONObject("volumeInfo");
-                    String title=volumeInfo.getString("title");
-                    JSONArray jsonArrayauthor=book.getJSONArray("authors");
-                    for(int j=0;j<jsonArrayauthor.length();j++)
-                    {
-                        JSONObject author=jsonArrayauthor.getJSONObject(j);
-                        authors=author.getString("authors");
+                    JSONObject current=itemsArray.getJSONObject(i);
+                    JSONObject volumeInfo=current.getJSONObject("volumeInfo");
+                    String bookTitle = volumeInfo.getString("title");
+                    String bookAuthors = "";
+                    if (volumeInfo.has("authors")) {
+                        JSONArray authors = volumeInfo.getJSONArray("authors");
+                        // creates a list of the authors as a string
+                        bookAuthors = authors.join(", ") + ".";
+                        bookAuthors = bookAuthors.replaceAll("\"", "");
                     }
-
-                    if(bookJSON.contains(title)||bookJSON.contains(authors)){
-                        return new item(title,authors);
-                    }
-                    else{
-                        Toast toast = Toast.makeText(getApplicationContext(),"No book found",Toast.LENGTH_SHORT);
-                        toast.show();
-                    }
+                    bookList.add(new item(bookTitle, bookAuthors));
                 }
-            }catch(JSONException e){
-                Log.e(LOG_TAG, "Problem parsing the JSON results lower block");
-                e.printStackTrace();
+                return bookList;
+            }catch(JSONException e)
+            {
+                Log.e("MainActivity.java", "Problem parsing the book JSON results lower block", e);
             }
+
             return null;
         }
     }
+
 }
