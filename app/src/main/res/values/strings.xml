@@ -2,5 +2,5 @@
     <string name="app_name">BookListingApp</string>
     <string name="hint">Name a book</string>
     <string name="search">search</string>
-    <string name="none">No results found!</string>
+    <string name="none">No results found!Try typing something else on the search bar</string>
 </resources>
